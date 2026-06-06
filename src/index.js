@@ -1,29 +1,21 @@
-import {openai} from './openai.js'
-// import {encoding_for_model} from 'tiktoken';
+import { openai } from "./openai.js";
 
-async function main(){
+async function aiAnswer(question) {
+  const response = await openai.responses.create({
+    model: "gpt-4o-mini",
+    input: question,
+  });
 
-    const prompt = `How are you?`;
-    const model = 'gpt-4o-mini'
-
-
-    const response = await openai.responses.create({
-        input: [
-           { role : 'user', content: prompt}
-        ],
-        model,
-        // temperature: 2
-        // max_output_tokens: 16
-        store: true
-    })
-
-    // console.log(response)
-
-    const oldResponse = await openai.responses.retrieve('resp_027e4e4147b44842006a22f33e50108193a1d630e72b37930b');
-    console.log(oldResponse)
+  console.log(response.output_text);
 }
 
-main().catch(err => {
-    console.error(err);
-    process.exit(1);
+process.stdout.write("Ask your question");
+
+process.stdin.on("data", (data) => {
+  const question = data.toString().trim();
+  if (question === "exit") {
+    process.exit();
+  } else {
+    aiAnswer(question);
+  }
 });
