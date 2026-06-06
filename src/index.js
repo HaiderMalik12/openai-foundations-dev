@@ -1,33 +1,30 @@
-import { openai } from "./openai.js";
+import OpenAI from "openai";
+import dotenv from 'dotenv';
+import {writeFileSync} from 'fs'
 
-const context = [
-  { 
-    role : 'system',
-    content: 'Keep answer short and simple'
-  }
-]
+dotenv.config();
 
-async function aiAnswer(question) {
-  
-  context.push({role: 'user', content: question});
+const client = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY
+});
 
-  const response = await openai.responses.create({
-    model: "gpt-4o-mini",
-    input: context,
+async function main(){
+  const response = await client.images.generate({
+    model: 'gpt-image-1.5',
+    prompt: 'Generate an image of a cat on a bus',
+    size: '1024x1024',
+    n: 1
   });
 
-  context.push({role: 'assistant', content: response.output_text});
-  console.log(context);
-  console.log(response.output_text);
+  const rawImage = response.data[0].b64_json;
+  const path = './generatedImg.png';
+  const buffer = Buffer.from(rawImage, 'base64');
+
+  writeFileSync(path, buffer);
+  console.log('Image is saved and path is ', path)
+  
 }
 
-process.stdout.write("Ask your question: ");
-
-process.stdin.on("data", (data) => {
-  const question = data.toString().trim();
-  if (question === "exit") {
-    process.exit();
-  } else {
-    aiAnswer(question);
-  }
-});
+main().catch((err) => {
+  console.log('Error in main func', err)
+})
