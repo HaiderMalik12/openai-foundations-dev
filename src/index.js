@@ -1,6 +1,6 @@
 import OpenAI from 'openai';
 import dotenv from 'dotenv';
-import { writeFileSync } from 'fs';
+import { createReadStream, writeFileSync } from 'fs';
 
 dotenv.config();
 
@@ -9,19 +9,16 @@ const client = new OpenAI({
 });
 
 async function main() {
-  const response = await client.images.generate({
-    model: 'gpt-image-1.5',
-    prompt: 'Generate an image of a cat on a bus',
-    size: '1024x1024',
-    n: 1,
+  const response = await client.audio.transcriptions.create({
+    model: 'whisper-1',
+    file: createReadStream('harvard.wav'),
+    language: 'en',
   });
 
-  const rawImage = response.data[0].b64_json;
-  const path = './generatedImg.png';
-  const buffer = Buffer.from(rawImage, 'base64');
+  console.log(response.text);
 
-  writeFileSync(path, buffer);
-  console.log('Image is saved and path is ', path);
+  const rawText = response.text;
+  writeFileSync('audioText.txt', rawText, 'utf-8');
 }
 
 main().catch((err) => {
