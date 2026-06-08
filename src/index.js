@@ -1,5 +1,8 @@
 import { GoogleGenAI } from '@google/genai';
+import express from 'express';
 import dotenv from 'dotenv';
+
+const app = express();
 
 dotenv.config({
   quiet: true,
@@ -9,21 +12,21 @@ const googleAI = new GoogleGenAI({
   apiKey: process.env.GEMINI_API_KEY,
 });
 
-async function main() {
-  const response = await googleAI.models.generateContent({
+app.get('/', async (req, res) => {
+  const response = await googleAI.models.generateContentStream({
     model: 'gemini-3.5-flash',
-    contents: 'What can I wear in a party',
-    config: {
-      temperature: 2.0,
-      //   thinkingConfig: {
-      //     includeThoughts: true,
-      //     // thinkingBudget: 100,
-      //   },
-      systemInstruction: 'give me simple answer 100 words',
-    },
+    contents: 'Tell me about AI in details',
   });
 
-  console.log(response.text);
-}
+  for await (const chunk of response) {
+    const text = chunk.text;
+    // console.log(text);
+    if (text) {
+      res.write(text);
+    }
+  }
 
-main();
+  res.end('------content completed -------');
+});
+
+app.listen(3200);
