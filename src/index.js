@@ -12,7 +12,15 @@ const googleAI = new GoogleGenAI({
 async function main() {
   const response = await googleAI.models.generateContent({
     model: 'gemini-3.5-flash',
-    contents: 'Tell me 5 fruits name',
+    contents: 'What can I wear in a party',
+    config: {
+      temperature: 2.0,
+      //   thinkingConfig: {
+      //     includeThoughts: true,
+      //     // thinkingBudget: 100,
+      //   },
+      systemInstruction: 'give me simple answer 100 words',
+    },
   });
 
   console.log(response.text);
