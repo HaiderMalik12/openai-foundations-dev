@@ -1,8 +1,6 @@
 import { GoogleGenAI } from '@google/genai';
-import express from 'express';
 import dotenv from 'dotenv';
-
-const app = express();
+import { readFileSync } from 'fs';
 
 dotenv.config({
   quiet: true,
@@ -12,21 +10,59 @@ const googleAI = new GoogleGenAI({
   apiKey: process.env.GEMINI_API_KEY,
 });
 
-app.get('/', async (req, res) => {
-  const response = await googleAI.models.generateContentStream({
-    model: 'gemini-3.5-flash',
-    contents: 'Tell me about AI in details',
-  });
+const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
-  for await (const chunk of response) {
-    const text = chunk.text;
-    // console.log(text);
-    if (text) {
-      res.write(text);
+async function generateWithRetry(request, maxAttempts = 4) {
+  let lastError;
+
+  for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
+    try {
+      return await googleAI.models.generateContent(request);
+    } catch (error) {
+      lastError = error;
+      const status = error?.status ?? error?.cause?.status;
+      const retryable = status === 503 || status === 504;
+
+      if (!retryable || attempt === maxAttempts) {
+        throw error;
+      }
+
+      const delayMs = 500 * 2 ** (attempt - 1);
+      console.warn(
+        `Gemini request failed with ${status}; retrying in ${delayMs}ms...`,
+      );
+      await sleep(delayMs);
     }
   }
 
-  res.end('------content completed -------');
-});
+  throw lastError;
+}
 
-app.listen(3200);
+async function main() {
+  const base64Img = readFileSync('02-generate-text.png', {
+    encoding: 'base64',
+  });
+  const response = await generateWithRetry({
+    model: 'gemini-2.5-flash',
+    contents: [
+      {
+        role: 'user',
+        parts: [
+          {
+            inlineData: {
+              mimeType: 'image/png',
+              data: base64Img,
+            },
+          },
+          {
+            text: 'tell me the color combination of this image',
+          },
+        ],
+      },
+    ],
+  });
+
+  console.log(response.text);
+}
+
+main();
