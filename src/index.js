@@ -1,53 +1,51 @@
 import { openai } from './openai.js'
+import { encoding_for_model } from 'tiktoken'
 
-// ─── ROLE: developer ────────────────────────────────────────────────────────
-// Sets behavior/persona rules for the model BEFORE the conversation starts.
-// The user sends a math question, but the chef persona ignores it and stays on topic.
-async function developerRoleExample() {
+// ─── TOKENS: response.usage ──────────────────────────────────────────────────
+// After an API call, response.usage tells you exactly how many tokens were used.
+// input_tokens = your prompt, output_tokens = the reply, total = both combined.
+// This is what OpenAI bills you for.
+async function usageExample() {
     const response = await openai.responses.create({
         model: 'gpt-4o-mini',
-        input: [
-            { role: 'developer', content: 'You are a chef. Only talk about food. Refuse anything unrelated.' },
-            { role: 'user',      content: 'What is 2 + 2?' },
-        ],
+        input: [{ role: 'user', content: 'What is the capital of France?' }],
     })
-    console.log('--- developer role ---')
+    console.log('--- response.usage ---')
+    console.log(response.usage)
+}
+
+// ─── TOKENS: max_output_tokens ───────────────────────────────────────────────
+// You can cap how many tokens the model is allowed to produce.
+// Here we ask for a detailed explanation but only allow 20 tokens — the response
+// will be cut short, making the limit visible.
+async function maxOutputTokensExample() {
+    const response = await openai.responses.create({
+        model: 'gpt-4o-mini',
+        input: [{ role: 'user', content: 'Explain the solar system in detail.' }],
+        max_output_tokens: 20,
+    })
+    console.log('--- max_output_tokens: 20 ---')
     console.log(response.output_text)
 }
 
-// ─── ROLE: user ─────────────────────────────────────────────────────────────
-// The human's message. The simplest case — just ask a question.
-async function userRoleExample() {
-    const response = await openai.responses.create({
-        model: 'gpt-4o-mini',
-        input: [
-            { role: 'user', content: 'What is the capital of Japan?' },
-        ],
-    })
-    console.log('--- user role ---')
-    console.log(response.output_text)
-}
+// ─── TOKENS: tiktoken (count tokens locally, no API call) ────────────────────
+// tiktoken lets you count tokens BEFORE sending anything to OpenAI.
+// Useful to estimate cost or check if a prompt fits within the model's limit.
+function tiktokenExample() {
+    const text = 'What is the capital of France?'
+    const encoder = encoding_for_model('gpt-4o')
+    const tokens = encoder.encode(text)
+    encoder.free()
 
-// ─── ROLE: assistant ─────────────────────────────────────────────────────────
-// Represents a prior AI response. Used to pass conversation history so the
-// model understands context. Without it, "Who is their president?" is ambiguous.
-async function assistantRoleExample() {
-    const response = await openai.responses.create({
-        model: 'gpt-4o-mini',
-        input: [
-            { role: 'user',      content: 'Tell me about France in one sentence.' },
-            { role: 'assistant', content: 'France is a Western European country known for its culture, cuisine, and the Eiffel Tower.' },
-            { role: 'user',      content: 'Who is their president?' },
-        ],
-    })
-    console.log('--- assistant role ---')
-    console.log(response.output_text)
+    console.log('--- tiktoken (local count) ---')
+    console.log(`Text   : "${text}"`)
+    console.log(`Tokens : ${tokens.length}`)
 }
 
 async function main() {
-    await developerRoleExample()
-    await userRoleExample()
-    await assistantRoleExample()
+    await usageExample()
+    await maxOutputTokensExample()
+    tiktokenExample()
 }
 
 main().catch(err => {
