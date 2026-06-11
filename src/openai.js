@@ -1,4 +1,3 @@
-console.log('Loading openai.ts');
 import OpenAI from 'openai';
 import dotenv from 'dotenv';
 
